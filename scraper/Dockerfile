@@ -21,7 +21,12 @@ RUN npm run build
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV DISPLAY=:99
 EXPOSE 3000
 
-# Run the server under a virtual X display.
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1366x900x24", "node", "dist/server.js"]
+# Entrypoint starts Xvfb in the background, then runs the server.
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["node", "dist/server.js"]
