@@ -37,12 +37,22 @@ class ScraperClient
                 ->acceptJson()
                 ->post(rtrim($this->baseUrl, '/').'/scrape', $payload);
         } catch (ConnectionException $e) {
-            Log::warning('Scraper connection failed', ['error' => $e->getMessage()]);
-            throw ScraperException::forType(ScraperException::TYPE_UNAVAILABLE);
+            Log::warning('Scraper connection failed', ['url' => $this->baseUrl, 'error' => $e->getMessage()]);
+            throw ScraperException::forType(
+                ScraperException::TYPE_UNAVAILABLE,
+                'не удалось подключиться к сервису парсинга',
+            );
         }
 
         if ($response->failed()) {
             $error = (string) $response->json('error', '');
+            $detail = (string) $response->json('message', '');
+
+            Log::warning('Scraper returned an error', [
+                'status' => $response->status(),
+                'error' => $error,
+                'message' => $detail,
+            ]);
 
             // The scraper reports recoverable, classified errors with a 4xx/5xx
             // status and a known "error" code in the body.
@@ -52,25 +62,24 @@ class ScraperClient
                 ScraperException::TYPE_UNAVAILABLE,
                 ScraperException::TYPE_EMPTY,
             ], true)) {
-                throw ScraperException::forType($error);
+                throw ScraperException::forType($error, $detail);
             }
 
-            Log::warning('Scraper returned an error', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-            throw ScraperException::forType(ScraperException::TYPE_UNAVAILABLE);
+            throw ScraperException::forType(
+                ScraperException::TYPE_UNAVAILABLE,
+                $detail !== '' ? $detail : 'HTTP '.$response->status(),
+            );
         }
 
         $data = $response->json();
 
         if (! is_array($data)) {
-            throw ScraperException::forType(ScraperException::TYPE_UNAVAILABLE);
+            throw ScraperException::forType(ScraperException::TYPE_UNAVAILABLE, 'некорректный ответ парсера');
         }
 
         // A successful response can still carry a classified error code.
         if (! empty($data['error'])) {
-            throw ScraperException::forType((string) $data['error']);
+            throw ScraperException::forType((string) $data['error'], (string) ($data['message'] ?? ''));
         }
 
         return ParsedOrganization::fromArray($data);

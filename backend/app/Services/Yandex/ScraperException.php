@@ -22,13 +22,21 @@ class ScraperException extends RuntimeException
         parent::__construct($message);
     }
 
-    public static function forType(string $type): self
+    public static function forType(string $type, ?string $detail = null): self
     {
-        return new self($type, match ($type) {
+        $message = match ($type) {
             self::TYPE_CAPTCHA => 'Яндекс показал капчу. Попробуйте позже или настройте прокси (SCRAPER_PROXY).',
             self::TYPE_MARKUP_CHANGED => 'Не удалось разобрать страницу: вероятно, изменилась вёрстка Яндекс.Карт.',
             self::TYPE_EMPTY => 'Отзывы не найдены для этой организации.',
             default => 'Сервис парсинга временно недоступен. Попробуйте позже.',
-        });
+        };
+
+        // Append the upstream detail (useful while debugging; safe to show — it
+        // describes the technical cause, e.g. a timeout or selector miss).
+        if ($detail !== null && $detail !== '') {
+            $message .= ' ('.$detail.')';
+        }
+
+        return new self($type, $message);
     }
 }

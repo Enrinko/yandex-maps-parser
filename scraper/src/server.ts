@@ -32,7 +32,9 @@ fastify.post<{ Body: ScrapeBody }>('/scrape', async (request, reply) => {
       return reply.status(status).send({ error: err.code, message: err.message });
     }
     request.log.error(err);
-    return reply.status(502).send({ error: 'unavailable', message: 'scrape failed' });
+    return reply
+      .status(502)
+      .send({ error: 'unavailable', message: (err as Error)?.message ?? 'scrape failed' });
   }
 });
 
