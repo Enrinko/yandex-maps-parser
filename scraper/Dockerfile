@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
 
-# Playwright base image ships Chromium + all system deps and matches the
-# playwright npm version below.
-FROM mcr.microsoft.com/playwright:v1.49.1-noble
+# Playwright base image ships Chromium + all system deps. The tag version MUST
+# match the "playwright" version in package.json (pinned exactly) so the bundled
+# browser matches what the library expects.
+FROM mcr.microsoft.com/playwright:v1.61.0-noble
 
 # Xvfb provides a virtual display so Chromium can run *headful* (Yandex withholds
 # reviews from truly headless windows).
