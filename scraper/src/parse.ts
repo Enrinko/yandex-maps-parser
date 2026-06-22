@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { selectors, captchaTextMarkers } from './selectors.js';
+import { selectors } from './selectors.js';
 import { parseCount, parseRating, parseRussianDate } from './dates.js';
 import { ScrapeError, type ScrapeResult, type ScrapedReview } from './types.js';
 
@@ -8,30 +8,29 @@ import { ScrapeError, type ScrapeResult, type ScrapedReview } from './types.js';
  * the same selectors as the browser path.
  */
 export function parseReviewsHtml(html: string, maxReviews: number): ScrapeResult {
-  const lower = html.toLowerCase();
-  for (const sel of selectors.captchaMarkers) {
-    // Class-based markers turned into rough substring checks on the raw HTML.
-    const token = sel.replace(/[.#\[\]'"=\-]/g, '').toLowerCase();
-    if (token && lower.includes(token)) {
+  const $ = cheerio.load(html);
+  const cards = $(selectors.reviewCard);
+
+  // If review cards are present, the page rendered fine — never a captcha.
+  // (Yandex always ships the SmartCaptcha SDK, so the word "captcha" appears in
+  // the HTML even with no challenge — we must not scan the raw markup for it.)
+  if (cards.length === 0) {
+    const captchaEl = selectors.captchaMarkers.some((sel) => $(sel).length > 0);
+    // Specific challenge phrase, unlikely to appear outside a real captcha page.
+    const bodyText = $('body').text().toLowerCase();
+    const captchaText = bodyText.includes('подтвердите, что запросы отправляли');
+
+    if (captchaEl || captchaText) {
       throw new ScrapeError('captcha');
     }
+    // Rendered but no cards: empty org if the container exists, else changed markup.
+    throw new ScrapeError($(selectors.reviewsContainer).length ? 'empty' : 'markup_changed');
   }
-  if (captchaTextMarkers.some((m) => m.length > 4 && lower.includes(m))) {
-    throw new ScrapeError('captcha');
-  }
-
-  const $ = cheerio.load(html);
 
   const textOf = (sel: string): string | null => {
     const t = $(sel).first().text().trim();
     return t === '' ? null : t;
   };
-
-  const cards = $(selectors.reviewCard);
-  if (cards.length === 0) {
-    // Page rendered but no review cards — either changed markup or empty org.
-    throw new ScrapeError($(selectors.reviewsContainer).length ? 'empty' : 'markup_changed');
-  }
 
   const reviews: ScrapedReview[] = [];
   cards.each((_, el) => {
@@ -65,3 +64,4 @@ export function parseReviewsHtml(html: string, maxReviews: number): ScrapeResult
     reviews,
   };
 }
+
