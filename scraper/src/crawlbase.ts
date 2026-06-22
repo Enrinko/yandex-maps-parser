@@ -35,7 +35,11 @@ export async function fetchViaCrawlbase(targetUrl: string, token: string): Promi
       signal: AbortSignal.timeout(150_000),
     });
   } catch (e) {
-    throw new ScrapeError('unavailable', `Crawlbase request failed: ${(e as Error).message}`);
+    // Node's fetch wraps the real network error in `cause` — surface it so the
+    // actual reason (DNS, refused, TLS, blocked) is visible instead of "fetch failed".
+    const cause = (e as { cause?: { code?: string; message?: string } }).cause;
+    const detail = cause?.code ?? cause?.message ?? (e as Error).message;
+    throw new ScrapeError('unavailable', `Crawlbase request failed: ${detail}`);
   }
 
   const raw = await res.text();
