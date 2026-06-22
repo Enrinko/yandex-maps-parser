@@ -10,19 +10,20 @@ const fastify = Fastify({
 interface ScrapeBody {
   url?: string;
   proxy?: string;
+  crawlbaseToken?: string;
 }
 
 fastify.get('/health', async () => ({ status: 'ok' }));
 
 fastify.post<{ Body: ScrapeBody }>('/scrape', async (request, reply) => {
-  const { url, proxy } = request.body ?? {};
+  const { url, proxy, crawlbaseToken } = request.body ?? {};
 
   if (!url || typeof url !== 'string') {
     return reply.status(400).send({ error: 'unavailable', message: 'url is required' });
   }
 
   try {
-    const result = await scrape({ url, proxy });
+    const result = await scrape({ url, proxy, crawlbaseToken });
     return reply.send(result);
   } catch (err) {
     if (err instanceof ScrapeError) {

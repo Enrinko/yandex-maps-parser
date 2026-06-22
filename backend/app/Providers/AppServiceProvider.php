@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
                 baseUrl: $config['url'],
                 proxy: $config['proxy'] ?: null,
                 timeout: $config['timeout'],
+                crawlbaseToken: $config['crawlbase_token'] ?: null,
             );
         });
     }

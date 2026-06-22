@@ -1,43 +1,23 @@
 import { chromium, type Browser, type Page } from 'playwright';
 import { selectors, captchaTextMarkers } from './selectors.js';
 import { parseCount, parseRating, parseRussianDate } from './dates.js';
+import { fetchViaCrawlbase } from './crawlbase.js';
+import { parseReviewsHtml } from './parse.js';
+import {
+  ScrapeError,
+  type ScrapeErrorCode,
+  type ScrapeOptions,
+  type ScrapeResult,
+  type ScrapedReview,
+} from './types.js';
 
-export type ScrapeErrorCode =
-  | 'captcha'
-  | 'markup_changed'
-  | 'unavailable'
-  | 'empty';
-
-export class ScrapeError extends Error {
-  constructor(public code: ScrapeErrorCode, message?: string) {
-    super(message ?? code);
-  }
-}
-
-export interface ScrapedReview {
-  externalId: string | null;
-  author: string | null;
-  rating: number | null;
-  text: string | null;
-  reviewedAt: string | null;
-}
-
-export interface ScrapeResult {
-  name: string | null;
-  rating: number | null;
-  ratingsCount: number | null;
-  reviewsCount: number | null;
-  reviews: ScrapedReview[];
-}
-
-export interface ScrapeOptions {
-  url: string;
-  proxy?: string;
-  /** Hard cap on the number of reviews collected. */
-  maxReviews?: number;
-  /** Overall scrolling time budget (ms). */
-  scrollTimeoutMs?: number;
-}
+export {
+  ScrapeError,
+  type ScrapeErrorCode,
+  type ScrapeOptions,
+  type ScrapeResult,
+  type ScrapedReview,
+};
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -72,6 +52,14 @@ export function parseProxy(raw?: string): ProxySettings | undefined {
 export async function scrape(options: ScrapeOptions): Promise<ScrapeResult> {
   const maxReviews = options.maxReviews ?? 1000;
   const scrollTimeoutMs = options.scrollTimeoutMs ?? 180_000;
+
+  // Preferred path when a Crawlbase token is configured: let Crawlbase render
+  // the JS page (and scroll/solve captcha) server-side and return HTML we parse.
+  // Driving a full browser through a smart proxy is too heavy for Yandex Maps.
+  if (options.crawlbaseToken) {
+    const html = await fetchViaCrawlbase(options.url, options.crawlbaseToken);
+    return parseReviewsHtml(html, maxReviews);
+  }
 
   let browser: Browser | null = null;
   try {

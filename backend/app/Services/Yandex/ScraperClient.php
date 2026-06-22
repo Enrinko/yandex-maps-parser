@@ -16,6 +16,7 @@ class ScraperClient
         private readonly string $baseUrl,
         private readonly ?string $proxy = null,
         private readonly int $timeout = 240,
+        private readonly ?string $crawlbaseToken = null,
     ) {
     }
 
@@ -30,6 +31,7 @@ class ScraperClient
             $payload = array_filter([
                 'url' => $url,
                 'proxy' => $this->proxy,
+                'crawlbaseToken' => $this->crawlbaseToken,
             ]);
 
             $response = Http::timeout($this->timeout)

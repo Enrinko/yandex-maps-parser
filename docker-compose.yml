@@ -38,6 +38,7 @@ services:
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       SCRAPER_URL: http://scraper:3000
       SCRAPER_PROXY: ${SCRAPER_PROXY:-}
+      CRAWLBASE_TOKEN: ${CRAWLBASE_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy
@@ -71,6 +72,7 @@ services:
       SESSION_DRIVER: redis
       SCRAPER_URL: http://scraper:3000
       SCRAPER_PROXY: ${SCRAPER_PROXY:-}
+      CRAWLBASE_TOKEN: ${CRAWLBASE_TOKEN:-}
       SCRAPER_TIMEOUT: ${SCRAPER_TIMEOUT:-240}
     depends_on:
       app:
