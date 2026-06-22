@@ -15,14 +15,22 @@ php artisan config:clear >/dev/null 2>&1 || true
 # Only the app role runs migrations; the queue worker sets RUN_MIGRATIONS=false.
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
   echo "Waiting for database and applying migrations..."
-  until php artisan migrate --force 2>/dev/null; do
-    echo "DB not ready yet, retrying in 3s..."
+  tries=0
+  # Bounded retry so a DB problem doesn't trap us in an infinite loop (which
+  # would keep php-fpm down and surface as a permanent 502 with no clue).
+  until php artisan migrate --force; do
+    tries=$((tries + 1))
+    if [ "$tries" -ge 20 ]; then
+      echo "WARNING: database still unavailable after $tries attempts; starting php-fpm anyway."
+      break
+    fi
+    echo "DB not ready (attempt $tries/20), retrying in 3s..."
     sleep 3
   done
 
-  # Seed the default admin user once (idempotent via updateOrCreate).
+  # Seed the default admin user (idempotent via updateOrCreate).
   php artisan db:seed --force || true
-  echo "Migrations + seed applied."
+  echo "Startup migrations done."
 fi
 
 exec "$@"
