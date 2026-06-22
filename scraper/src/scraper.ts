@@ -43,6 +43,32 @@ const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+interface ProxySettings {
+  server: string;
+  username?: string;
+  password?: string;
+}
+
+/**
+ * Parse a proxy URL into Playwright's {server, username, password} form.
+ * Credentials embedded in the URL (e.g. Crawlbase "TOKEN@host:port", empty
+ * password) are extracted, since Playwright requires them passed separately.
+ */
+export function parseProxy(raw?: string): ProxySettings | undefined {
+  if (!raw) return undefined;
+  try {
+    const u = new URL(raw);
+    const settings: ProxySettings = { server: `${u.protocol}//${u.host}` };
+    if (u.username) settings.username = decodeURIComponent(u.username);
+    if (u.password) settings.password = decodeURIComponent(u.password);
+    // Crawlbase uses the token as username with an empty password.
+    if (u.username && !u.password) settings.password = '';
+    return settings;
+  } catch {
+    return { server: raw };
+  }
+}
+
 export async function scrape(options: ScrapeOptions): Promise<ScrapeResult> {
   const maxReviews = options.maxReviews ?? 1000;
   const scrollTimeoutMs = options.scrollTimeoutMs ?? 180_000;
@@ -52,7 +78,7 @@ export async function scrape(options: ScrapeOptions): Promise<ScrapeResult> {
     browser = await chromium.launch({
       // Headful is required: Yandex withholds reviews from headless windows.
       headless: false,
-      proxy: options.proxy ? { server: options.proxy } : undefined,
+      proxy: parseProxy(options.proxy),
       args: [
         '--no-sandbox',
         '--disable-blink-features=AutomationControlled',
@@ -65,6 +91,9 @@ export async function scrape(options: ScrapeOptions): Promise<ScrapeResult> {
       locale: 'ru-RU',
       timezoneId: 'Europe/Moscow',
       viewport: { width: 1366, height: 900 },
+      // Smart proxies (e.g. Crawlbase) intercept TLS with their own certificate,
+      // so certificate validation must be relaxed when a proxy is in use.
+      ignoreHTTPSErrors: Boolean(options.proxy),
     });
 
     // Light stealth: hide webdriver flag.
