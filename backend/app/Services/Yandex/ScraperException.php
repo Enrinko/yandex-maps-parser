@@ -22,6 +22,15 @@ class ScraperException extends RuntimeException
         parent::__construct($message);
     }
 
+    /**
+     * Only transient failures (scraper unreachable, network) are worth retrying.
+     * Captcha / markup change / empty are deterministic — fail fast.
+     */
+    public function isRetryable(): bool
+    {
+        return $this->type === self::TYPE_UNAVAILABLE;
+    }
+
     public static function forType(string $type, ?string $detail = null): self
     {
         $message = match ($type) {

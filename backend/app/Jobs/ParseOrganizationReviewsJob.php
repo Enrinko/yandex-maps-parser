@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Organization;
 use App\Services\OrganizationService;
+use App\Services\Yandex\ScraperException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Throwable;
@@ -40,7 +41,19 @@ class ParseOrganizationReviewsJob implements ShouldQueue
             return;
         }
 
-        $service->runParse($organization);
+        try {
+            $service->runParse($organization);
+        } catch (ScraperException $e) {
+            // Deterministic failures (captcha, markup change, empty) won't improve
+            // on retry — fail immediately instead of burning attempts + backoff.
+            if (! $e->isRetryable()) {
+                $this->fail($e);
+
+                return;
+            }
+
+            throw $e;
+        }
     }
 
     /**
