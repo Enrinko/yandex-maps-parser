@@ -111,13 +111,21 @@ export async function scrape(options: ScrapeOptions): Promise<ScrapeResult> {
     });
 
     const page = await context.newPage();
-    await page.goto(options.url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+
+    // Smart proxies (Crawlbase) tunnel every request and can be slow, so give
+    // navigation a larger budget. 'commit' resolves as soon as the main response
+    // arrives instead of hanging while sub-resources load through the proxy.
+    const navTimeout = options.proxy ? 120_000 : 60_000;
+    await page.goto(options.url, { waitUntil: 'commit', timeout: navTimeout });
+    await page
+      .waitForLoadState('domcontentloaded', { timeout: navTimeout })
+      .catch(() => {});
 
     await assertNoCaptcha(page);
 
     // Wait for the reviews list; if it never appears the markup likely changed.
     try {
-      await page.waitForSelector(selectors.reviewCard, { timeout: 30_000 });
+      await page.waitForSelector(selectors.reviewCard, { timeout: navTimeout });
     } catch {
       await assertNoCaptcha(page);
       // No cards could mean a genuinely empty org or changed markup.
