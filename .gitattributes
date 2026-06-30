@@ -1,0 +1,5 @@
+# Shell scripts must keep LF line endings, otherwise the shebang breaks when the
+# repo is checked out on Windows (CRLF) and the script is run inside a container.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+entrypoint.sh text eol=lf

@@ -1,0 +1,36 @@
+# Local development overrides (applied automatically by `docker compose`).
+# Mounts source for live editing and runs the Vite dev server with HMR.
+services:
+  app:
+    volumes:
+      - ./backend:/var/www/html
+      # Keep the image's vendor/ (don't shadow it with the host).
+      - /var/www/html/vendor
+    environment:
+      APP_DEBUG: "true"
+
+  queue:
+    volumes:
+      - ./backend:/var/www/html
+      - /var/www/html/vendor
+
+  scraper:
+    build:
+      context: ./scraper
+      dockerfile: Dockerfile
+    volumes:
+      - ./scraper/src:/app/src
+
+  # Vite dev server with hot-module reload. The SPA proxies /api and /sanctum to
+  # nginx (see frontend/vite.config.ts), so cookie auth shares one origin.
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - nginx

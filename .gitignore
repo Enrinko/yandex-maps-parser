@@ -1,0 +1,35 @@
+# Dependencies
+/backend/vendor/
+/scraper/node_modules/
+/frontend/node_modules/
+
+# Env
+.env
+*/.env
+!.env.example
+!*/.env.example
+
+# Build output
+/frontend/dist/
+/backend/public/build/
+/backend/storage/*.key
+
+# Laravel
+/backend/storage/framework/cache/*
+/backend/storage/framework/sessions/*
+/backend/storage/framework/views/*
+/backend/storage/logs/*
+/backend/bootstrap/cache/*
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Build artifacts
+/scraper/dist/

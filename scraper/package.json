@@ -1,0 +1,23 @@
+{
+  "name": "yandex-maps-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node + Playwright microservice that scrapes Yandex.Maps organization reviews.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "test": "node --import tsx --test src/*.test.ts"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "fastify": "^5.2.0",
+    "playwright": "1.61.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
